@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- note: to re-use an existing Android attribute not already used by the superclass, name should have prefix "android:" and do not define a format -->
+    <declare-styleable name="FlyingLayout">
+        <attr name="speed" format="float" />
+        <attr name="horizontalPadding" format="dimension" />
+        <attr name="verticalPadding" format="dimension" />
+        <attr name="ignoreTouchEvent" format="boolean" />
+        <attr name="useContainer" format="boolean" />
+        <attr name="offsetX" format="integer" />
+        <attr name="offsetY" format="integer" />
+    </declare-styleable>
+
+</resources>
