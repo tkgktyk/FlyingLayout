@@ -1,8 +1,11 @@
 package jp.tkgktyk.flyinglayout;
 
+import android.animation.TypeEvaluator;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Point;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -150,6 +153,7 @@ public class FlyingLayoutF extends FrameLayout {
 
 	public void setOffsetX(int offset) {
 		mOffsetX = offset;
+		requestLayout();
 	}
 
 	public int getOffsetX() {
@@ -158,10 +162,17 @@ public class FlyingLayoutF extends FrameLayout {
 
 	public void setOffsetY(int offset) {
 		mOffsetY = offset;
+		requestLayout();
 	}
 
 	public int getOffsetY() {
 		return mOffsetY;
+	}
+
+	public void setOffset(int x, int y) {
+		mOffsetX = x;
+		mOffsetY = y;
+		requestLayout();
 	}
 
 	@Override
@@ -387,15 +398,11 @@ public class FlyingLayoutF extends FrameLayout {
 		}
 	}
 
+	@SuppressLint("NewApi")
 	@Override
 	protected void onLayout(boolean changed, int left, int top, int right,
 			int bottom) {
-		layoutChildren(left, top, right, bottom, false /* no force left gravity */);
-	}
-
-	@SuppressLint("NewApi")
-	void layoutChildren(int left, int top, int right, int bottom,
-			boolean forceLeftGravity) {
+		boolean forceLeftGravity = false;
 		final int count = getChildCount();
 
 		final int parentLeft = getPaddingLeft();
@@ -479,34 +486,59 @@ public class FlyingLayoutF extends FrameLayout {
 	}
 
 	public void move(int deltaX, int deltaY) {
+		move(deltaX, deltaY, false);
+	}
+
+	public void move(int deltaX, int deltaY, boolean animation) {
 		deltaX = (int) Math.round(deltaX * mSpeed);
 		deltaY = (int) Math.round(deltaY * mSpeed);
-		moveWithoutSpeed(deltaX, deltaY);
+		moveWithoutSpeed(deltaX, deltaY, animation);
 	}
 
 	public void moveWithoutSpeed(int deltaX, int deltaY) {
+		moveWithoutSpeed(deltaX, deltaY, false);
+	}
+
+	public void moveWithoutSpeed(int deltaX, int deltaY, boolean animation) {
 		int hLimit = getWidth() - getHorizontalPadding();
 		int vLimit = getHeight() - getVerticalPadding();
-		mOffsetX = clamp(mOffsetX + deltaX, hLimit);
-		mOffsetY = clamp(mOffsetY + deltaY, vLimit);
-		if (mOnFlyingEventListener != null) {
-			mOnFlyingEventListener.onMove(this, deltaX, deltaY);
+		int newX = clamp(mOffsetX + deltaX, hLimit);
+		int newY = clamp(mOffsetY + deltaY, vLimit);
+		if (!animation) {
+			setOffset(newX, newY);
+		} else {
+			Point start = new Point(mOffsetX, mOffsetY);
+			Point end = new Point(newX, newY);
+			ValueAnimator anim = ValueAnimator.ofObject(
+					new TypeEvaluator<Point>() {
+						@Override
+						public Point evaluate(float fraction, Point startValue,
+								Point endValue) {
+							return new Point(Math.round(startValue.x
+									+ (endValue.x - startValue.x) * fraction),
+									Math.round(startValue.y
+											+ (endValue.y - startValue.y)
+											* fraction));
+						}
+					}, start, end);
+			anim.setDuration(300);
+			anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+				@Override
+				public void onAnimationUpdate(ValueAnimator animation) {
+					Point offset = (Point) animation.getAnimatedValue();
+					setOffset(offset.x, offset.y);
+				}
+			});
+			anim.start();
 		}
-
-		requestLayout();
 	}
 
 	public void goHome() {
-		int x = mOffsetX;
-		int y = mOffsetY;
-		mOffsetX = 0;
-		mOffsetY = 0;
+		goHome(false);
+	}
 
-		if (mOnFlyingEventListener != null) {
-			mOnFlyingEventListener.onMove(this, -x, -y);
-		}
-
-		requestLayout();
+	public void goHome(boolean animation) {
+		moveWithoutSpeed(-mOffsetX, -mOffsetY, animation);
 	}
 
 	public boolean staysHome() {
@@ -553,14 +585,6 @@ public class FlyingLayoutF extends FrameLayout {
 	}
 
 	public interface OnFlyingEventListener {
-		/**
-		 * callback when onMove event.
-		 * 
-		 * @param deltaX
-		 * @param deltaY
-		 */
-		public void onMove(FlyingLayoutF v, int deltaX, int deltaY);
-
 		/**
 		 * callback when a moving event is finished.
 		 * 

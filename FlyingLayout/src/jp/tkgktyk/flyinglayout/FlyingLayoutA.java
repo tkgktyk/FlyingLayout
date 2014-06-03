@@ -10,6 +10,11 @@ import android.view.ViewConfiguration;
 import android.view.ViewParent;
 import android.widget.AbsoluteLayout;
 
+/**
+ * Not maintained.
+ * @author tkgktyk
+ *
+ */
 @SuppressWarnings("deprecation")
 public class FlyingLayoutA extends AbsoluteLayout {
 	private static final String TAG = FlyingLayoutA.class.getSimpleName();
@@ -407,23 +412,6 @@ public class FlyingLayoutA extends AbsoluteLayout {
 			mOnFlyingEventListener.onMove(this, deltaX, deltaY);
 		}
 
-		layoutAfterMoving();
-	}
-
-	public void goHome() {
-		int x = mOffsetX;
-		int y = mOffsetY;
-		mOffsetX = 0;
-		mOffsetY = 0;
-
-		if (mOnFlyingEventListener != null) {
-			mOnFlyingEventListener.onMove(this, -x, -y);
-		}
-
-		layoutAfterMoving();
-	}
-
-	private void layoutAfterMoving() {
 		int n = getUseContainer() ? 1 : getChildCount();
 		for (int i = 0; i < n; ++i) {
 			View child = getChildAt(i);
@@ -433,6 +421,10 @@ public class FlyingLayoutA extends AbsoluteLayout {
 			lp.y = mOffsetY;
 			child.setLayoutParams(lp);
 		}
+	}
+
+	public void goHome() {
+		moveWithoutSpeed(-mOffsetX, -mOffsetY);
 	}
 
 	public boolean staysHome() {
