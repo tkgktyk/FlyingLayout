@@ -521,7 +521,7 @@ public class FlyingLayoutF extends FrameLayout {
 											* fraction));
 						}
 					}, start, end);
-			anim.setDuration(300);
+			anim.setDuration(250);
 			anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
 				@Override
 				public void onAnimationUpdate(ValueAnimator animation) {
