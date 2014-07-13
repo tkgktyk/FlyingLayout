@@ -6,6 +6,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -60,6 +61,9 @@ public class FlyingLayoutF extends FrameLayout {
 	private int mOffsetX;
 	private int mOffsetY;
 
+	private Rect mChildRect;
+	private Rect mBoundaryRect;
+
 	private void fetchAttribute(Context context, AttributeSet attrs,
 			int defStyle) {
 		// get attributes specified in XML
@@ -92,6 +96,7 @@ public class FlyingLayoutF extends FrameLayout {
 		mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
 
 		fetchAttribute(context, attrs, defStyle);
+		initBoundary();
 	}
 
 	public FlyingLayoutF(Context context, AttributeSet attrs) {
@@ -109,6 +114,13 @@ public class FlyingLayoutF extends FrameLayout {
 		setUseContainer(DEFAULT_USE_CONTAINER);
 		setOffsetX(DEFAULT_OFFSET_X);
 		setOffsetY(DEFAULT_OFFSET_Y);
+
+		initBoundary();
+	}
+
+	private void initBoundary() {
+		mChildRect = new Rect();
+		mBoundaryRect = new Rect();
 	}
 
 	public void setSpeed(float speed) {
@@ -177,9 +189,9 @@ public class FlyingLayoutF extends FrameLayout {
 
 	@Override
 	public boolean onInterceptTouchEvent(MotionEvent ev) {
-		if (!mIsBeingDragged && mIgnoreTouchEvent) {
-			return false;
-		}
+		// if (!mIsBeingDragged && mIgnoreTouchEvent) {
+		// return false;
+		// }
 
 		/*
 		 * This method JUST determines whether we want to intercept the motion.
@@ -192,8 +204,15 @@ public class FlyingLayoutF extends FrameLayout {
 		 * and he is moving his finger. We want to intercept this motion.
 		 */
 		final int action = ev.getAction();
-		if ((action == MotionEvent.ACTION_MOVE) && (mIsBeingDragged)) {
-			return true;
+		// if ((action == MotionEvent.ACTION_MOVE) && (mIsBeingDragged)) {
+		// return true;
+		// }
+		if (action == MotionEvent.ACTION_MOVE) {
+			if (mIsBeingDragged) {
+				return true;
+			} else if (mIgnoreTouchEvent) {
+				return false;
+			}
 		}
 
 		switch (action & MotionEvent.ACTION_MASK) {
@@ -280,11 +299,16 @@ public class FlyingLayoutF extends FrameLayout {
 
 	@Override
 	public boolean onTouchEvent(MotionEvent ev) {
-		if (!mIsBeingDragged && mIgnoreTouchEvent && insideOfContents(ev)) {
-			return false;
-		}
+		// if (!mIsBeingDragged && mIgnoreTouchEvent && insideOfContents(ev)) {
+		// return false;
+		// }
 
 		final int action = ev.getAction();
+		if (action == MotionEvent.ACTION_MOVE) {
+			if (!mIsBeingDragged && mIgnoreTouchEvent) {
+				return false;
+			}
+		}
 
 		switch (action & MotionEvent.ACTION_MASK) {
 		case MotionEvent.ACTION_DOWN: {
@@ -299,10 +323,6 @@ public class FlyingLayoutF extends FrameLayout {
 			break;
 		}
 		case MotionEvent.ACTION_MOVE: {
-			if (!mIsBeingDragged && mIgnoreTouchEvent) {
-				return false;
-			}
-
 			final int activePointerIndex = ev
 					.findPointerIndex(mActivePointerId);
 			if (activePointerIndex == -1) {
@@ -311,34 +331,36 @@ public class FlyingLayoutF extends FrameLayout {
 				break;
 			}
 
-			boolean isBeingDraggedX = false;
-			boolean isBeingDraggedY = false;
 			final int x = (int) ev.getX(activePointerIndex);
 			int deltaX = mLastMotionX - x;
-			if (!mIsBeingDragged && Math.abs(deltaX) > mTouchSlop) {
-				isBeingDraggedX = true;
-				if (deltaX > 0) {
-					deltaX -= mTouchSlop;
-				} else {
-					deltaX += mTouchSlop;
-				}
-			}
 			final int y = (int) ev.getY(activePointerIndex);
 			int deltaY = mLastMotionY - y;
-			if (!mIsBeingDragged && Math.abs(deltaY) > mTouchSlop) {
-				isBeingDraggedY = true;
-				if (deltaY > 0) {
-					deltaY -= mTouchSlop;
-				} else {
-					deltaY += mTouchSlop;
+			if (!mIsBeingDragged) {
+				boolean isBeingDraggedX = false;
+				boolean isBeingDraggedY = false;
+				if (Math.abs(deltaX) > mTouchSlop) {
+					isBeingDraggedX = true;
+					if (deltaX > 0) {
+						deltaX -= mTouchSlop;
+					} else {
+						deltaX += mTouchSlop;
+					}
 				}
-			}
-			if (isBeingDraggedX || isBeingDraggedY) {
-				final ViewParent parent = getParent();
-				if (parent != null) {
-					parent.requestDisallowInterceptTouchEvent(true);
+				if (Math.abs(deltaY) > mTouchSlop) {
+					isBeingDraggedY = true;
+					if (deltaY > 0) {
+						deltaY -= mTouchSlop;
+					} else {
+						deltaY += mTouchSlop;
+					}
 				}
-				mIsBeingDragged = true;
+				if (isBeingDraggedX || isBeingDraggedY) {
+					final ViewParent parent = getParent();
+					if (parent != null) {
+						parent.requestDisallowInterceptTouchEvent(true);
+					}
+					mIsBeingDragged = true;
+				}
 			}
 			if (mIsBeingDragged) {
 				// Scroll to follow the motion event
@@ -411,6 +433,7 @@ public class FlyingLayoutF extends FrameLayout {
 		final int parentTop = getPaddingTop();
 		final int parentBottom = bottom - top - getPaddingBottom();
 
+		mBoundaryRect.setEmpty();
 		for (int i = 0; i < count; i++) {
 			final View child = getChildAt(i);
 			if (child.getVisibility() != GONE) {
@@ -464,14 +487,14 @@ public class FlyingLayoutF extends FrameLayout {
 					childTop = parentTop + lp.topMargin;
 				}
 
+				mChildRect.set(childLeft, childTop, childLeft + width,
+						childTop + height);
 				if (!getUseContainer() || i == 0) {
-					child.layout(childLeft + mOffsetX, childTop + mOffsetY,
-							childLeft + width + mOffsetX, childTop + height
-									+ mOffsetY);
-				} else {
-					child.layout(childLeft, childTop, childLeft + width,
-							childTop + height);
+					mChildRect.offset(mOffsetX, mOffsetY);
+					mBoundaryRect.union(mChildRect);
 				}
+				child.layout(mChildRect.left, mChildRect.top,
+						mChildRect.right, mChildRect.bottom);
 			}
 		}
 	}
