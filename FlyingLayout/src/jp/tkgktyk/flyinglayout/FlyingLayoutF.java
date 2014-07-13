@@ -297,6 +297,7 @@ public class FlyingLayoutF extends FrameLayout {
 		return mIsBeingDragged;
 	};
 
+	@SuppressLint("ClickableViewAccessibility")
 	@Override
 	public boolean onTouchEvent(MotionEvent ev) {
 		// if (!mIsBeingDragged && mIgnoreTouchEvent && insideOfContents(ev)) {
@@ -487,14 +488,14 @@ public class FlyingLayoutF extends FrameLayout {
 					childTop = parentTop + lp.topMargin;
 				}
 
-				mChildRect.set(childLeft, childTop, childLeft + width,
-						childTop + height);
+				mChildRect.set(childLeft, childTop, childLeft + width, childTop
+						+ height);
 				if (!getUseContainer() || i == 0) {
 					mChildRect.offset(mOffsetX, mOffsetY);
 					mBoundaryRect.union(mChildRect);
 				}
-				child.layout(mChildRect.left, mChildRect.top,
-						mChildRect.right, mChildRect.bottom);
+				child.layout(mChildRect.left, mChildRect.top, mChildRect.right,
+						mChildRect.bottom);
 			}
 		}
 	}
