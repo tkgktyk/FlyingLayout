@@ -1,28 +1,32 @@
 package jp.tkgktyk.flyinglayout;
 
+import android.animation.TypeEvaluator;
+import android.animation.ValueAnimator;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Point;
+import android.graphics.Rect;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewParent;
-import android.widget.AbsoluteLayout;
+import android.widget.FrameLayout;
 
-/**
- * Not maintained.
- * @author tkgktyk
- *
- */
-@SuppressWarnings("deprecation")
-public class FlyingLayoutA extends AbsoluteLayout {
-	private static final String TAG = FlyingLayoutA.class.getSimpleName();
+public class FlyingLayout extends FrameLayout {
+	private static final String TAG = FlyingLayout.class.getSimpleName();
+
+	private static int DEFAULT_CHILD_GRAVITY = Gravity.TOP | Gravity.START;
 
 	private static final float DEFAULT_SPEED = 1.0f;
 	private static final int DEFAULT_HORIZONTAL_PADDING = 0;
 	private static final int DEFAULT_VERTICAL_PADDING = 0;
-	private static final boolean DEFAULT_IGNORE_TOUCH_EVENT = false;
+	private static final boolean DEFAULT_ENABLE_TOUCH_EVENT = true;
+	private static final float DEFAULT_SLOP_SCALE = 1.0f;
 	private static final boolean DEFAULT_USE_CONTAINER = false;
 	private static final int DEFAULT_OFFSET_X = 0;
 	private static final int DEFAULT_OFFSET_Y = 0;
@@ -37,6 +41,7 @@ public class FlyingLayoutA extends AbsoluteLayout {
 	 * drags/flings if multiple pointers are used.
 	 */
 	private int mActivePointerId = INVALID_POINTER;
+	private int mDefaultTouchSlop;
 	private int mTouchSlop;
 	/**
 	 * True if the user is currently dragging this ScrollView around. This is
@@ -53,10 +58,15 @@ public class FlyingLayoutA extends AbsoluteLayout {
 	private float mSpeed;
 	private int mHorizontalPadding;
 	private int mVerticalPadding;
-	private boolean mIgnoreTouchEvent;
+	private boolean mEnableTouchEventX;
+	private boolean mEnableTouchEventY;
+	private float mSlopScale;
 	private boolean mUseContainer;
 	private int mOffsetX;
 	private int mOffsetY;
+
+	private Rect mChildRect;
+	private Rect mBoundaryRect;
 
 	private void fetchAttribute(Context context, AttributeSet attrs,
 			int defStyle) {
@@ -71,9 +81,14 @@ public class FlyingLayoutA extends AbsoluteLayout {
 			setVerticalPadding(a.getDimensionPixelSize(
 					R.styleable.FlyingLayout_verticalPadding,
 					DEFAULT_VERTICAL_PADDING));
-			setIgnoreTouchEvent(a.getBoolean(
-					R.styleable.FlyingLayout_ignoreTouchEvent,
-					DEFAULT_IGNORE_TOUCH_EVENT));
+			setEnableTouchEventX(a.getBoolean(
+					R.styleable.FlyingLayout_enableTouchEventX,
+					DEFAULT_ENABLE_TOUCH_EVENT));
+			setEnableTouchEventY(a.getBoolean(
+					R.styleable.FlyingLayout_enableTouchEventY,
+					DEFAULT_ENABLE_TOUCH_EVENT));
+			setSlopScale(a.getFloat(R.styleable.FlyingLayout_slopScale,
+					DEFAULT_SLOP_SCALE));
 			setUseContainer(a.getBoolean(R.styleable.FlyingLayout_useContainer,
 					DEFAULT_USE_CONTAINER));
 			setOffsetX(a.getInt(R.styleable.FlyingLayout_offsetX,
@@ -85,28 +100,38 @@ public class FlyingLayoutA extends AbsoluteLayout {
 		}
 	}
 
-	public FlyingLayoutA(Context context, AttributeSet attrs, int defStyle) {
+	public FlyingLayout(Context context, AttributeSet attrs, int defStyle) {
 		super(context, attrs, defStyle);
-		mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+		mDefaultTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
 
 		fetchAttribute(context, attrs, defStyle);
+		initBoundary();
 	}
 
-	public FlyingLayoutA(Context context, AttributeSet attrs) {
+	public FlyingLayout(Context context, AttributeSet attrs) {
 		this(context, attrs, 0);
 	}
 
-	public FlyingLayoutA(Context context) {
+	public FlyingLayout(Context context) {
 		super(context);
-		mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+		mDefaultTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
 
 		setSpeed(DEFAULT_SPEED);
 		setHorizontalPadding(DEFAULT_HORIZONTAL_PADDING);
 		setVerticalPadding(DEFAULT_VERTICAL_PADDING);
-		setIgnoreTouchEvent(DEFAULT_IGNORE_TOUCH_EVENT);
+		setEnableTouchEventX(DEFAULT_ENABLE_TOUCH_EVENT);
+		setEnableTouchEventY(DEFAULT_ENABLE_TOUCH_EVENT);
+		setSlopScale(DEFAULT_SLOP_SCALE);
 		setUseContainer(DEFAULT_USE_CONTAINER);
 		setOffsetX(DEFAULT_OFFSET_X);
 		setOffsetY(DEFAULT_OFFSET_Y);
+
+		initBoundary();
+	}
+
+	private void initBoundary() {
+		mChildRect = new Rect();
+		mBoundaryRect = new Rect();
 	}
 
 	public void setSpeed(float speed) {
@@ -133,12 +158,29 @@ public class FlyingLayoutA extends AbsoluteLayout {
 		return mVerticalPadding;
 	}
 
-	public void setIgnoreTouchEvent(boolean ignore) {
-		mIgnoreTouchEvent = ignore;
+	public void setEnableTouchEventX(boolean enable) {
+		mEnableTouchEventX = enable;
 	}
 
-	public boolean getIgnoreTouchEvent() {
-		return mIgnoreTouchEvent;
+	public boolean getEnableTouchEventX() {
+		return mEnableTouchEventX;
+	}
+
+	public void setEnableTouchEventY(boolean enable) {
+		mEnableTouchEventY = enable;
+	}
+
+	public boolean getEnableTouchEventY() {
+		return mEnableTouchEventY;
+	}
+
+	public void setSlopScale(float scale) {
+		mSlopScale = scale;
+		mTouchSlop = Math.round(mDefaultTouchSlop * scale);
+	}
+
+	public float getSlopScale() {
+		return mSlopScale;
 	}
 
 	public void setUseContainer(boolean use) {
@@ -151,6 +193,7 @@ public class FlyingLayoutA extends AbsoluteLayout {
 
 	public void setOffsetX(int offset) {
 		mOffsetX = offset;
+		requestLayout();
 	}
 
 	public int getOffsetX() {
@@ -159,18 +202,21 @@ public class FlyingLayoutA extends AbsoluteLayout {
 
 	public void setOffsetY(int offset) {
 		mOffsetY = offset;
+		requestLayout();
 	}
 
 	public int getOffsetY() {
 		return mOffsetY;
 	}
 
+	public void setOffset(int x, int y) {
+		mOffsetX = x;
+		mOffsetY = y;
+		requestLayout();
+	}
+
 	@Override
 	public boolean onInterceptTouchEvent(MotionEvent ev) {
-		if (!mIsBeingDragged && mIgnoreTouchEvent) {
-			return false;
-		}
-
 		/*
 		 * This method JUST determines whether we want to intercept the motion.
 		 * If we return true, onMotionEvent will be called and we do the actual
@@ -182,7 +228,7 @@ public class FlyingLayoutA extends AbsoluteLayout {
 		 * and he is moving his finger. We want to intercept this motion.
 		 */
 		final int action = ev.getAction();
-		if ((action == MotionEvent.ACTION_MOVE) && (mIsBeingDragged)) {
+		if ((action == MotionEvent.ACTION_MOVE) && mIsBeingDragged) {
 			return true;
 		}
 
@@ -214,17 +260,21 @@ public class FlyingLayoutA extends AbsoluteLayout {
 
 			boolean isBeingDraggedX = false;
 			boolean isBeingDraggedY = false;
-			final int x = (int) ev.getX(pointerIndex);
-			final int xDiff = Math.abs(x - mLastMotionX);
-			final int y = (int) ev.getY(pointerIndex);
-			final int yDiff = Math.abs(y - mLastMotionY);
-			if (xDiff > mTouchSlop) {
-				isBeingDraggedX = true;
-				mLastMotionX = x;
+			if (mEnableTouchEventX) {
+				final int x = (int) ev.getX(pointerIndex);
+				final int xDiff = Math.abs(x - mLastMotionX);
+				if (xDiff > mTouchSlop) {
+					isBeingDraggedX = true;
+					mLastMotionX = x;
+				}
 			}
-			if (yDiff > mTouchSlop) {
-				isBeingDraggedY = true;
-				mLastMotionY = y;
+			if (mEnableTouchEventY) {
+				final int y = (int) ev.getY(pointerIndex);
+				final int yDiff = Math.abs(y - mLastMotionY);
+				if (yDiff > mTouchSlop) {
+					isBeingDraggedY = true;
+					mLastMotionY = y;
+				}
 			}
 			if (isBeingDraggedX || isBeingDraggedY) {
 				final ViewParent parent = getParent();
@@ -232,6 +282,7 @@ public class FlyingLayoutA extends AbsoluteLayout {
 					parent.requestDisallowInterceptTouchEvent(true);
 				}
 				mIsBeingDragged = true;
+				onDragStarted();
 			}
 			break;
 		}
@@ -268,14 +319,10 @@ public class FlyingLayoutA extends AbsoluteLayout {
 		return mIsBeingDragged;
 	};
 
+	@SuppressLint("ClickableViewAccessibility")
 	@Override
 	public boolean onTouchEvent(MotionEvent ev) {
-		if (!mIsBeingDragged && mIgnoreTouchEvent && insideOfContents(ev)) {
-			return false;
-		}
-
 		final int action = ev.getAction();
-
 		switch (action & MotionEvent.ACTION_MASK) {
 		case MotionEvent.ACTION_DOWN: {
 			if (getChildCount() == 0) {
@@ -289,10 +336,6 @@ public class FlyingLayoutA extends AbsoluteLayout {
 			break;
 		}
 		case MotionEvent.ACTION_MOVE: {
-			if (!mIsBeingDragged && mIgnoreTouchEvent) {
-				return false;
-			}
-
 			final int activePointerIndex = ev
 					.findPointerIndex(mActivePointerId);
 			if (activePointerIndex == -1) {
@@ -301,34 +344,37 @@ public class FlyingLayoutA extends AbsoluteLayout {
 				break;
 			}
 
-			boolean isBeingDraggedX = false;
-			boolean isBeingDraggedY = false;
 			final int x = (int) ev.getX(activePointerIndex);
 			int deltaX = mLastMotionX - x;
-			if (!mIsBeingDragged && Math.abs(deltaX) > mTouchSlop) {
-				isBeingDraggedX = true;
-				if (deltaX > 0) {
-					deltaX -= mTouchSlop;
-				} else {
-					deltaX += mTouchSlop;
-				}
-			}
 			final int y = (int) ev.getY(activePointerIndex);
 			int deltaY = mLastMotionY - y;
-			if (!mIsBeingDragged && Math.abs(deltaY) > mTouchSlop) {
-				isBeingDraggedY = true;
-				if (deltaY > 0) {
-					deltaY -= mTouchSlop;
-				} else {
-					deltaY += mTouchSlop;
+			if (!mIsBeingDragged) {
+				boolean isBeingDraggedX = false;
+				boolean isBeingDraggedY = false;
+				if (mEnableTouchEventX && (Math.abs(deltaX) > mTouchSlop)) {
+					isBeingDraggedX = true;
+					if (deltaX > 0) {
+						deltaX -= mTouchSlop;
+					} else {
+						deltaX += mTouchSlop;
+					}
 				}
-			}
-			if (isBeingDraggedX || isBeingDraggedY) {
-				final ViewParent parent = getParent();
-				if (parent != null) {
-					parent.requestDisallowInterceptTouchEvent(true);
+				if (mEnableTouchEventY && (Math.abs(deltaY) > mTouchSlop)) {
+					isBeingDraggedY = true;
+					if (deltaY > 0) {
+						deltaY -= mTouchSlop;
+					} else {
+						deltaY += mTouchSlop;
+					}
 				}
-				mIsBeingDragged = true;
+				if (isBeingDraggedX || isBeingDraggedY) {
+					final ViewParent parent = getParent();
+					if (parent != null) {
+						parent.requestDisallowInterceptTouchEvent(true);
+					}
+					mIsBeingDragged = true;
+					onDragStarted();
+				}
 			}
 			if (mIsBeingDragged) {
 				// Scroll to follow the motion event
@@ -341,7 +387,7 @@ public class FlyingLayoutA extends AbsoluteLayout {
 		}
 		case MotionEvent.ACTION_UP: {
 			if (mIsBeingDragged) {
-				onMoveFinished();
+				onDragFinished();
 				mActivePointerId = INVALID_POINTER;
 				mIsBeingDragged = false;
 			} else {
@@ -351,7 +397,7 @@ public class FlyingLayoutA extends AbsoluteLayout {
 		}
 		case MotionEvent.ACTION_CANCEL:
 			if (mIsBeingDragged && getChildCount() > 0) {
-				onMoveFinished();
+				onDragFinished();
 				mActivePointerId = INVALID_POINTER;
 				mIsBeingDragged = false;
 			} else if (!mIsBeingDragged) {
@@ -388,6 +434,85 @@ public class FlyingLayoutA extends AbsoluteLayout {
 		}
 	}
 
+	@SuppressLint("NewApi")
+	@Override
+	protected void onLayout(boolean changed, int left, int top, int right,
+			int bottom) {
+		boolean forceLeftGravity = false;
+		final int count = getChildCount();
+
+		final int parentLeft = getPaddingLeft();
+		final int parentRight = right - left - getPaddingRight();
+
+		final int parentTop = getPaddingTop();
+		final int parentBottom = bottom - top - getPaddingBottom();
+
+		mBoundaryRect.setEmpty();
+		for (int i = 0; i < count; i++) {
+			final View child = getChildAt(i);
+			if (child.getVisibility() != GONE) {
+				final LayoutParams lp = (LayoutParams) child.getLayoutParams();
+
+				final int width = child.getMeasuredWidth();
+				final int height = child.getMeasuredHeight();
+
+				int childLeft;
+				int childTop;
+
+				int gravity = lp.gravity;
+				if (gravity == -1) {
+					gravity = DEFAULT_CHILD_GRAVITY;
+				}
+
+				final int layoutDirection = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) ? getLayoutDirection()
+						: 0;
+				final int absoluteGravity = Gravity.getAbsoluteGravity(gravity,
+						layoutDirection);
+				final int verticalGravity = gravity
+						& Gravity.VERTICAL_GRAVITY_MASK;
+
+				switch (absoluteGravity & Gravity.HORIZONTAL_GRAVITY_MASK) {
+				case Gravity.CENTER_HORIZONTAL:
+					childLeft = parentLeft + (parentRight - parentLeft - width)
+							/ 2 + lp.leftMargin - lp.rightMargin;
+					break;
+				case Gravity.RIGHT:
+					if (!forceLeftGravity) {
+						childLeft = parentRight - width - lp.rightMargin;
+						break;
+					}
+				case Gravity.LEFT:
+				default:
+					childLeft = parentLeft + lp.leftMargin;
+				}
+
+				switch (verticalGravity) {
+				case Gravity.TOP:
+					childTop = parentTop + lp.topMargin;
+					break;
+				case Gravity.CENTER_VERTICAL:
+					childTop = parentTop + (parentBottom - parentTop - height)
+							/ 2 + lp.topMargin - lp.bottomMargin;
+					break;
+				case Gravity.BOTTOM:
+					childTop = parentBottom - height - lp.bottomMargin;
+					break;
+				default:
+					childTop = parentTop + lp.topMargin;
+				}
+
+				mChildRect.set(childLeft, childTop, childLeft + width, childTop
+						+ height);
+				if (!getUseContainer() || i == 0) {
+					mChildRect.offset(mOffsetX, mOffsetY);
+					mBoundaryRect.union(mChildRect);
+				}
+				child.layout(mChildRect.left, mChildRect.top, mChildRect.right,
+						mChildRect.bottom);
+			}
+		}
+	}
+
 	protected int clamp(int src, int limit) {
 		if (src > limit) {
 			return limit;
@@ -398,33 +523,59 @@ public class FlyingLayoutA extends AbsoluteLayout {
 	}
 
 	public void move(int deltaX, int deltaY) {
+		move(deltaX, deltaY, false);
+	}
+
+	public void move(int deltaX, int deltaY, boolean animation) {
 		deltaX = (int) Math.round(deltaX * mSpeed);
 		deltaY = (int) Math.round(deltaY * mSpeed);
-		moveWithoutSpeed(deltaX, deltaY);
+		moveWithoutSpeed(deltaX, deltaY, animation);
 	}
 
 	public void moveWithoutSpeed(int deltaX, int deltaY) {
+		moveWithoutSpeed(deltaX, deltaY, false);
+	}
+
+	public void moveWithoutSpeed(int deltaX, int deltaY, boolean animation) {
 		int hLimit = getWidth() - getHorizontalPadding();
 		int vLimit = getHeight() - getVerticalPadding();
-		mOffsetX = clamp(mOffsetX + deltaX, hLimit);
-		mOffsetY = clamp(mOffsetY + deltaY, vLimit);
-		if (mOnFlyingEventListener != null) {
-			mOnFlyingEventListener.onMove(this, deltaX, deltaY);
-		}
-
-		int n = getUseContainer() ? 1 : getChildCount();
-		for (int i = 0; i < n; ++i) {
-			View child = getChildAt(i);
-			AbsoluteLayout.LayoutParams lp = (AbsoluteLayout.LayoutParams) child
-					.getLayoutParams();
-			lp.x = mOffsetX;
-			lp.y = mOffsetY;
-			child.setLayoutParams(lp);
+		int newX = clamp(mOffsetX + deltaX, hLimit);
+		int newY = clamp(mOffsetY + deltaY, vLimit);
+		if (!animation) {
+			setOffset(newX, newY);
+		} else {
+			Point start = new Point(mOffsetX, mOffsetY);
+			Point end = new Point(newX, newY);
+			ValueAnimator anim = ValueAnimator.ofObject(
+					new TypeEvaluator<Point>() {
+						@Override
+						public Point evaluate(float fraction, Point startValue,
+								Point endValue) {
+							return new Point(Math.round(startValue.x
+									+ (endValue.x - startValue.x) * fraction),
+									Math.round(startValue.y
+											+ (endValue.y - startValue.y)
+											* fraction));
+						}
+					}, start, end);
+			anim.setDuration(250);
+			anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+				@Override
+				public void onAnimationUpdate(ValueAnimator animation) {
+					Point offset = (Point) animation.getAnimatedValue();
+					setOffset(offset.x, offset.y);
+				}
+			});
+			anim.start();
 		}
 	}
 
 	public void goHome() {
-		moveWithoutSpeed(-mOffsetX, -mOffsetY);
+		goHome(false);
+	}
+
+	public void goHome(boolean animation) {
+		moveWithoutSpeed(-mOffsetX, -mOffsetY, animation);
 	}
 
 	public boolean staysHome() {
@@ -464,36 +615,37 @@ public class FlyingLayoutA extends AbsoluteLayout {
 		}
 	}
 
-	public void onMoveFinished() {
+	public void onDragStarted() {
 		if (mOnFlyingEventListener != null) {
-			mOnFlyingEventListener.onMoveFinished(this);
+			mOnFlyingEventListener.onDragStarted(this);
+		}
+	}
+
+	public void onDragFinished() {
+		if (mOnFlyingEventListener != null) {
+			mOnFlyingEventListener.onDragFinished(this);
 		}
 	}
 
 	public interface OnFlyingEventListener {
-		/**
-		 * callback when onMove event.
-		 * 
-		 * @param deltaX
-		 * @param deltaY
-		 */
-		public void onMove(FlyingLayoutA v, int deltaX, int deltaY);
+		
+		public void onDragStarted(FlyingLayout v);
 
 		/**
 		 * callback when a moving event is finished.
 		 * 
 		 * @param v
 		 */
-		public void onMoveFinished(FlyingLayoutA v);
+		public void onDragFinished(FlyingLayout v);
 
 		/**
-		 * callback when happen click event at outside of contents.
+		 * callback when click event is happen at outside of contents.
 		 * 
 		 * @param v
 		 * @param x
 		 * @param y
 		 */
-		public void onOutsideClick(FlyingLayoutA v, int x, int y);
+		public void onOutsideClick(FlyingLayout v, int x, int y);
 	}
 
 	private OnFlyingEventListener mOnFlyingEventListener = null;

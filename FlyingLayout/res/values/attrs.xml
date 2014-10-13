@@ -6,7 +6,9 @@
         <attr name="speed" format="float" />
         <attr name="horizontalPadding" format="dimension" />
         <attr name="verticalPadding" format="dimension" />
-        <attr name="ignoreTouchEvent" format="boolean" />
+        <attr name="enableTouchEventX" format="boolean" />
+        <attr name="enableTouchEventY" format="boolean" />
+        <attr name="slopScale" format="float" />
         <attr name="useContainer" format="boolean" />
         <attr name="offsetX" format="integer" />
         <attr name="offsetY" format="integer" />
