@@ -10,8 +10,6 @@
         <attr name="enableTouchEventY" format="boolean" />
         <attr name="slopScale" format="float" />
         <attr name="useContainer" format="boolean" />
-        <attr name="offsetX" format="integer" />
-        <attr name="offsetY" format="integer" />
     </declare-styleable>
 
 </resources>

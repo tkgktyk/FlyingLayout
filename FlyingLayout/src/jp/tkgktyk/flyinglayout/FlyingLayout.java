@@ -28,8 +28,6 @@ public class FlyingLayout extends FrameLayout {
 	private static final boolean DEFAULT_ENABLE_TOUCH_EVENT = true;
 	private static final float DEFAULT_SLOP_SCALE = 1.0f;
 	private static final boolean DEFAULT_USE_CONTAINER = false;
-	private static final int DEFAULT_OFFSET_X = 0;
-	private static final int DEFAULT_OFFSET_Y = 0;
 
 	/**
 	 * Sentinel value for no current active pointer. Used by
@@ -91,10 +89,6 @@ public class FlyingLayout extends FrameLayout {
 					DEFAULT_SLOP_SCALE));
 			setUseContainer(a.getBoolean(R.styleable.FlyingLayout_useContainer,
 					DEFAULT_USE_CONTAINER));
-			setOffsetX(a.getInt(R.styleable.FlyingLayout_offsetX,
-					DEFAULT_OFFSET_X));
-			setOffsetY(a.getInt(R.styleable.FlyingLayout_offsetY,
-					DEFAULT_OFFSET_Y));
 		} finally {
 			a.recycle();
 		}
@@ -102,10 +96,9 @@ public class FlyingLayout extends FrameLayout {
 
 	public FlyingLayout(Context context, AttributeSet attrs, int defStyle) {
 		super(context, attrs, defStyle);
-		mDefaultTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+		initialize();
 
 		fetchAttribute(context, attrs, defStyle);
-		initBoundary();
 	}
 
 	public FlyingLayout(Context context, AttributeSet attrs) {
@@ -114,7 +107,7 @@ public class FlyingLayout extends FrameLayout {
 
 	public FlyingLayout(Context context) {
 		super(context);
-		mDefaultTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+		initialize();
 
 		setSpeed(DEFAULT_SPEED);
 		setHorizontalPadding(DEFAULT_HORIZONTAL_PADDING);
@@ -123,13 +116,11 @@ public class FlyingLayout extends FrameLayout {
 		setEnableTouchEventY(DEFAULT_ENABLE_TOUCH_EVENT);
 		setSlopScale(DEFAULT_SLOP_SCALE);
 		setUseContainer(DEFAULT_USE_CONTAINER);
-		setOffsetX(DEFAULT_OFFSET_X);
-		setOffsetY(DEFAULT_OFFSET_Y);
-
-		initBoundary();
 	}
 
-	private void initBoundary() {
+	private void initialize() {
+		mDefaultTouchSlop = ViewConfiguration.get(getContext())
+				.getScaledTouchSlop();
 		mChildRect = new Rect();
 		mBoundaryRect = new Rect();
 	}
@@ -268,11 +259,9 @@ public class FlyingLayout extends FrameLayout {
 			final int yDiff = Math.abs(y - mLastMotionY);
 			if (mEnableTouchEventX && (xDiff > mTouchSlop)) {
 				isBeingDraggedX = true;
-				mLastMotionX = x;
 			}
 			if (mEnableTouchEventY && (yDiff > mTouchSlop)) {
 				isBeingDraggedY = true;
-				mLastMotionY = y;
 			}
 			if (isBeingDraggedX || isBeingDraggedY) {
 				final ViewParent parent = getParent();
@@ -280,8 +269,6 @@ public class FlyingLayout extends FrameLayout {
 					parent.requestDisallowInterceptTouchEvent(true);
 				}
 				locallyDrag = true;
-				// mIsBeingDragged = true;
-				// onDragStarted();
 			}
 			break;
 		}
@@ -316,7 +303,6 @@ public class FlyingLayout extends FrameLayout {
 		 * drag mode.
 		 */
 		return mIsBeingDragged || locallyDrag;
-		// return mIsBeingDragged;
 	};
 
 	@SuppressLint("ClickableViewAccessibility")
@@ -345,27 +331,17 @@ public class FlyingLayout extends FrameLayout {
 			}
 
 			final int x = (int) ev.getX(activePointerIndex);
-			int deltaX = mLastMotionX - x;
+			int deltaX = x - mLastMotionX;
 			final int y = (int) ev.getY(activePointerIndex);
-			int deltaY = mLastMotionY - y;
+			int deltaY = y - mLastMotionY;
 			if (!mIsBeingDragged) {
 				boolean isBeingDraggedX = false;
 				boolean isBeingDraggedY = false;
 				if (mEnableTouchEventX && (Math.abs(deltaX) > mTouchSlop)) {
 					isBeingDraggedX = true;
-					// if (deltaX > 0) {
-					// deltaX -= mTouchSlop;
-					// } else {
-					// deltaX += mTouchSlop;
-					// }
 				}
 				if (mEnableTouchEventY && (Math.abs(deltaY) > mTouchSlop)) {
 					isBeingDraggedY = true;
-					// if (deltaY > 0) {
-					// deltaY -= mTouchSlop;
-					// } else {
-					// deltaY += mTouchSlop;
-					// }
 				}
 				if (isBeingDraggedX || isBeingDraggedY) {
 					final ViewParent parent = getParent();
@@ -379,7 +355,7 @@ public class FlyingLayout extends FrameLayout {
 			if (mIsBeingDragged) {
 				// Scroll to follow the motion event
 
-				move(-deltaX, -deltaY);
+				move(deltaX, deltaY);
 				mLastMotionX = x;
 				mLastMotionY = y;
 			}
