@@ -1,0 +1,96 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <jp.tkgktyk.flyinglayout.FlyingLayout
+        xmlns:app="http://schemas.android.com/apk/res/jp.tkgktyk.flyinglayoutexample"
+        android:id="@+id/flying"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        app:horizontalPadding="@dimen/flying_padding"
+        app:useContainer="false"
+        app:verticalPadding="@dimen/flying_padding" >
+
+        <View
+            android:id="@+id/left"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="left"
+            android:background="@android:color/darker_gray" />
+
+        <View
+            android:id="@+id/top"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="top"
+            android:background="@android:color/darker_gray" />
+
+        <View
+            android:id="@+id/right"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="right"
+            android:background="@android:color/darker_gray" />
+
+        <View
+            android:id="@+id/bottom"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="bottom"
+            android:background="@android:color/darker_gray" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Gray region shows horizontal/vertical padding area.\nMovement is limited by the padding." />
+    </jp.tkgktyk.flyinglayout.FlyingLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="horizontal padding: " />
+
+        <EditText
+            android:id="@+id/h_pad"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="number" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="vertical padding: " />
+
+        <EditText
+            android:id="@+id/v_pad"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="number" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="dp" />
+    </LinearLayout>
+
+</LinearLayout>
