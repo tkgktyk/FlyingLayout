@@ -99,6 +99,8 @@ public class FlyingLayout extends FrameLayout {
 		initialize();
 
 		fetchAttribute(context, attrs, defStyle);
+
+		overwriteSpeedByXposed();
 	}
 
 	public FlyingLayout(Context context, AttributeSet attrs) {
@@ -116,6 +118,13 @@ public class FlyingLayout extends FrameLayout {
 		setEnableTouchEventY(DEFAULT_ENABLE_TOUCH_EVENT);
 		setSlopScale(DEFAULT_SLOP_SCALE);
 		setUseContainer(DEFAULT_USE_CONTAINER);
+
+		overwriteSpeedByXposed();
+	}
+
+	private void overwriteSpeedByXposed() {
+		// doing nothing
+		// hook from Xposed
 	}
 
 	private void initialize() {
