@@ -36,7 +36,7 @@ public class SpeedFragment extends Fragment {
 		mFlyingLayout.setOnFlyingEventListener(new OnFlyingEventListener() {
 			@Override
 			public void onOutsideClick(FlyingLayout v, int x, int y) {
-				mFlyingLayout.goHome(true);
+				v.goHome(true);
 			}
 
 			@Override
