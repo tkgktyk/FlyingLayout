@@ -364,7 +364,7 @@ public class FlyingLayout extends FrameLayout {
 			if (mIsBeingDragged) {
 				// Scroll to follow the motion event
 
-				move(deltaX, deltaY);
+				move(deltaX, deltaY, false);
 				mLastMotionX = x;
 				mLastMotionY = y;
 			}
@@ -507,18 +507,10 @@ public class FlyingLayout extends FrameLayout {
 		return src;
 	}
 
-	public void move(int deltaX, int deltaY) {
-		move(deltaX, deltaY, false);
-	}
-
 	public void move(int deltaX, int deltaY, boolean animation) {
 		deltaX = (int) Math.round(deltaX * mSpeed);
 		deltaY = (int) Math.round(deltaY * mSpeed);
 		moveWithoutSpeed(deltaX, deltaY, animation);
-	}
-
-	public void moveWithoutSpeed(int deltaX, int deltaY) {
-		moveWithoutSpeed(deltaX, deltaY, false);
 	}
 
 	public void moveWithoutSpeed(int deltaX, int deltaY, boolean animation) {
@@ -553,10 +545,6 @@ public class FlyingLayout extends FrameLayout {
 			});
 			anim.start();
 		}
-	}
-
-	public void goHome() {
-		goHome(false);
 	}
 
 	public void goHome(boolean animation) {
