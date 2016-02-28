@@ -10,7 +10,3 @@
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 * See the License for the specific language governing permissions and
 * limitations under the License.
-*
-* You may not distribute nor sell this software or parts of it in 
-* Source, Object nor in any other form without explicit permission obtained 
-* from the original author.
