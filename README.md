@@ -1,4 +1,8 @@
 # Flying Layout
+
+This is free and unencumbered software released into the public domain.
+https://choosealicense.com/licenses/unlicense/
+
 * * *
 # Move your views on Android
 This is an Android Layout Library provides movable views by drag.
